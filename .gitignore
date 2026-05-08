@@ -1,0 +1,31 @@
+# Binaries
+bin/
+server
+tmp_app
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Environment files
+.env
+
+# Database files
+*.db
+*.db-journal
+
+# Logs
+*.log
+
+# Dependencies
+vendor/
+
+# CSV files (Usage statistics)
+data.csv
+
+# Documentation (PRDs)
+SystemPrd.md
+
+# External project references (as per previous state)
+../Music-Player/
