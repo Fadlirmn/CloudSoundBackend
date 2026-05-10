@@ -54,13 +54,13 @@ func (h *MusicHandler) GetFeed(c *gin.Context) {
 }
 
 func (h *MusicHandler) GetRecommendations(c *gin.Context) {
-	usages, err := h.service.GetRecommendations()
+	tracks, err := h.service.GetRecommendations()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, usages)
+	c.JSON(http.StatusOK, tracks)
 }
 
 func (h *MusicHandler) GetMostPlayed(c *gin.Context) {

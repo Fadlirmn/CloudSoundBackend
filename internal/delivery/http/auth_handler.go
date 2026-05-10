@@ -63,3 +63,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"user":  user,
 	})
 }
+func (h *AuthHandler) GetProfile(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	user, err := h.service.GetUserByID(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+	c.JSON(http.StatusOK, user)
+}

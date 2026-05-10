@@ -14,7 +14,7 @@ type MusicService interface {
 	Search(query string) ([]models.Track, error)
 	GetTrack(id string) (*models.Track, error)
 	GetHomeFeed() ([]models.Track, error)
-	GetRecommendations() ([]models.APIUsage, error)
+	GetRecommendations() ([]models.Track, error)
 	GetMostPlayed() ([]models.Track, error)
 	SaveRecentlyPlayed(userID string, track *models.Track) error
 	ToggleLike(userID string, track *models.Track) (bool, error)
@@ -79,35 +79,13 @@ func (s *musicService) GetHomeFeed() ([]models.Track, error) {
 	return s.mapJamendoToInternal(jamendoTracks), nil
 }
 
-func (s *musicService) GetRecommendations() ([]models.APIUsage, error) {
-	file, err := os.Open("data.csv")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
+func (s *musicService) GetRecommendations() ([]models.Track, error) {
+	jamendoTracks, err := s.client.GetPopularTracks(20)
 	if err != nil {
 		return nil, err
 	}
 
-	var usages []models.APIUsage
-	for i, row := range records {
-		if i == 0 {
-			continue // skip header
-		}
-		if len(row) < 2 {
-			continue
-		}
-		hits, _ := strconv.Atoi(row[1])
-		usages = append(usages, models.APIUsage{
-			Datetime: row[0],
-			Hits:     hits,
-		})
-	}
-
-	return usages, nil
+	return s.mapJamendoToInternal(jamendoTracks), nil
 }
 
 func (s *musicService) GetMostPlayed() ([]models.Track, error) {

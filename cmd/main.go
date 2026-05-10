@@ -53,11 +53,21 @@ func main() {
 	r := gin.Default()
 
 	// CORS Middleware
-	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
-	if len(allowedOrigins) == 0 || allowedOrigins[0] == "" {
-		allowedOrigins = []string{"http://localhost:5173"}
+	envOrigins := os.Getenv("ALLOWED_ORIGINS")
+	var allowedOrigins []string
+
+	if envOrigins != "" {
+		allowedOrigins = strings.Split(envOrigins, ",")
 	}
 
+	// Selalu tambahkan localhost agar development di CachyOS tetap lancar
+	allowedOrigins = append(allowedOrigins, "http://localhost:5173")
+
+	// Hapus spasi jika ada user yang input "url1, url2" (pakai spasi)
+	for i, v := range allowedOrigins {
+		allowedOrigins[i] = strings.TrimSpace(v)
+	}
+	
 	allowedMethods := strings.Split(os.Getenv("ALLOWED_METHODS"), ",")
 	if len(allowedMethods) == 0 || allowedMethods[0] == "" {
 		allowedMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
@@ -100,6 +110,7 @@ func main() {
 		meGroup := v1.Group("/me")
 		meGroup.Use(http.AuthMiddleware())
 		{
+			meGroup.GET("/profile", authHandler.GetProfile)
 			meGroup.GET("/playlists", playlistHandler.GetMyPlaylists)
 			meGroup.POST("/playlists", playlistHandler.Create)
 			meGroup.POST("/playlists/:id/tracks", playlistHandler.AddTrack)
