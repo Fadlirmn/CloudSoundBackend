@@ -25,8 +25,8 @@ type Playlist struct {
 
 type Track struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`
-	ExternalID  string `gorm:"uniqueIndex" json:"external_id"` // ID from Jamendo/Deezer
-	Title       string `json:"title"`
+	ExternalID  string `json:"external_id"` 
+	Title       string `gorm:"uniqueIndex" json:"title"` // Use Title as primary business index
 	ArtistName  string `json:"artist_name"`
 	AlbumName   string `json:"album_name"`
 	Duration    int    `json:"duration"`
@@ -35,21 +35,21 @@ type Track struct {
 }
 
 type PlaylistTrack struct {
-	PlaylistID      uint      `gorm:"primaryKey"`
-	TrackExternalID string    `gorm:"primaryKey"`
-	AddedAt         time.Time `json:"added_at"`
+	PlaylistID uint      `gorm:"primaryKey"`
+	TrackTitle string    `gorm:"primaryKey"`
+	AddedAt    time.Time `json:"added_at"`
 }
 
 type RecentlyPlayed struct {
-	UserID          string    `gorm:"primaryKey" json:"user_id"`
-	TrackExternalID string    `gorm:"primaryKey" json:"track_external_id"`
-	PlayedAt        time.Time `json:"played_at"`
+	UserID     string    `gorm:"primaryKey" json:"user_id"`
+	TrackTitle string    `gorm:"primaryKey" json:"track_title"`
+	PlayedAt   time.Time `json:"played_at"`
 }
 
 type LikedTrack struct {
-	UserID          string    `gorm:"primaryKey" json:"user_id"`
-	TrackExternalID string    `gorm:"primaryKey" json:"track_external_id"`
-	CreatedAt       time.Time `json:"created_at"`
+	UserID     string    `gorm:"primaryKey" json:"user_id"`
+	TrackTitle string    `gorm:"primaryKey" json:"track_title"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type APIUsage struct {

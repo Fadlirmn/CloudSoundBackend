@@ -10,7 +10,7 @@ type PlaylistService interface {
 	GetUserPlaylists(userID string) ([]models.Playlist, error)
 	GetPlaylistByID(id uint) (*models.Playlist, error)
 	AddTrackToPlaylist(playlistID uint, track models.Track) error
-	RemoveTrackFromPlaylist(playlistID uint, trackExternalID string) error
+	RemoveTrackFromPlaylist(playlistID uint, trackTitle string) error
 }
 
 type playlistService struct {
@@ -44,6 +44,6 @@ func (s *playlistService) AddTrackToPlaylist(playlistID uint, track models.Track
 	return s.repo.AddTrack(playlistID, &track)
 }
 
-func (s *playlistService) RemoveTrackFromPlaylist(playlistID uint, trackExternalID string) error {
-	return s.repo.RemoveTrack(playlistID, trackExternalID)
+func (s *playlistService) RemoveTrackFromPlaylist(playlistID uint, trackTitle string) error {
+	return s.repo.RemoveTrack(playlistID, trackTitle)
 }

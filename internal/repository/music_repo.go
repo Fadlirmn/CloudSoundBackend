@@ -23,7 +23,7 @@ func NewMusicRepository(db *gorm.DB) MusicRepository {
 
 func (r *musicRepo) ensureTrackExists(track *models.Track) error {
 	var existingTrack models.Track
-	err := r.db.Where("external_id = ?", track.ExternalID).First(&existingTrack).Error
+	err := r.db.Where("title = ?", track.Title).First(&existingTrack).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return r.db.Create(track).Error
@@ -39,9 +39,9 @@ func (r *musicRepo) SaveRecentlyPlayed(userID string, track *models.Track) error
 	}
 
 	recent := models.RecentlyPlayed{
-		UserID:          userID,
-		TrackExternalID: track.ExternalID,
-		PlayedAt:        time.Now(),
+		UserID:     userID,
+		TrackTitle: track.Title,
+		PlayedAt:   time.Now(),
 	}
 	// Upsert
 	return r.db.Save(&recent).Error
@@ -59,7 +59,7 @@ func (r *musicRepo) ToggleLike(userID string, track *models.Track) (bool, error)
 	}
 
 	var liked models.LikedTrack
-	err := r.db.Where("user_id = ? AND track_external_id = ?", userID, track.ExternalID).First(&liked).Error
+	err := r.db.Where("user_id = ? AND track_title = ?", userID, track.Title).First(&liked).Error
 	
 	if err == nil {
 		err = r.db.Delete(&liked).Error
@@ -68,9 +68,9 @@ func (r *musicRepo) ToggleLike(userID string, track *models.Track) (bool, error)
 	
 	if err == gorm.ErrRecordNotFound {
 		liked = models.LikedTrack{
-			UserID:          userID,
-			TrackExternalID: track.ExternalID,
-			CreatedAt:       time.Now(),
+			UserID:     userID,
+			TrackTitle: track.Title,
+			CreatedAt:  time.Now(),
 		}
 		err = r.db.Create(&liked).Error
 		return true, err
@@ -82,7 +82,7 @@ func (r *musicRepo) ToggleLike(userID string, track *models.Track) (bool, error)
 func (r *musicRepo) GetLikedTracks(userID string) ([]models.Track, error) {
 	var tracks []models.Track
 	err := r.db.Table("tracks").
-		Joins("join liked_tracks on liked_tracks.track_external_id = tracks.external_id").
+		Joins("join liked_tracks on liked_tracks.track_title = tracks.title").
 		Where("liked_tracks.user_id = ?", userID).
 		Order("liked_tracks.created_at desc").
 		Find(&tracks).Error
