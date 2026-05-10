@@ -10,6 +10,7 @@ tmp_app
 
 # Environment files
 .env
+Local.env
 
 # Database files
 *.db
@@ -29,5 +30,7 @@ SystemPrd.md
 
 # External project references (as per previous state)
 ../Music-Player/
+
+# Agent files
 .agents/
 skills-lock.json
