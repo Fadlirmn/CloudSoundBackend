@@ -29,3 +29,5 @@ SystemPrd.md
 
 # External project references (as per previous state)
 ../Music-Player/
+.agents/
+skills-lock.json
