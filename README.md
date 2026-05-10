@@ -1,28 +1,30 @@
-# Music Player API (Backend)
+# CloudSound API (Backend)
 
-A high-performance music streaming API built with Go, Gin, and GORM. This backend integrates with the Jamendo API to provide music search, discovery, and personalized library features.
+A high-performance music streaming API built with Go, Gin, and GORM. Optimized for reliability with title-based track indexing and session persistence.
 
 ## 🚀 Tech Stack
 
 - **Language**: Go (Golang)
 - **Web Framework**: Gin Gonic
 - **ORM**: GORM (PostgreSQL)
+- **Database**: Supabase (Postgres with Connection Pooling)
 - **API Integration**: Jamendo Music API
 - **Authentication**: JWT (JSON Web Tokens)
-- **Environment**: Dotenv for configuration
 
-## ✨ Features
+## ✨ Key Features
 
-- **Auth**: JWT-based Login & Registration.
-- **Music**: 
-  - Search tracks from Jamendo.
-  - Discovery feed & Recommendations.
-  - Most played track tracking.
-- **Library**: 
-  - Create & manage personal playlists.
-  - Add tracks to playlists.
-  - Liked/Favorite tracks (managed via frontend/playlists).
-- **CORS**: Configurable Allowed Origins for secure deployment.
+- **Auth System**:
+  - JWT-based Login & Registration.
+  - Persistent Session Verification via `/v1/me/profile`.
+- **Music Logic**: 
+  - **Title-indexed Tracks**: Every track is uniquely identified by its title in the database, preventing sync issues across different API providers.
+  - Automated Metadata Caching for user activities.
+- **Library Management**: 
+  - Playlist creation and track associations.
+  - Persistent "Liked Tracks" and "Recently Played" history.
+- **System Stability**:
+  - Daily Keep-Alive worker to prevent Supabase project pausing.
+  - Robust CORS configuration with dynamic environment support.
 
 ## 🛠️ Local Setup
 
@@ -31,14 +33,10 @@ A high-performance music streaming API built with Go, Gin, and GORM. This backen
    Create a `.env` file in the root directory:
    ```env
    PORT=8080
-   DB_HOST=localhost
-   DB_USER=your_user
-   DB_PASSWORD=your_password
-   DB_NAME=music_player
-   DB_PORT=5432
+   DATABASE_URL=your_postgres_url
+   JWT_SECRET=your_secret_key
    JAMENDO_CLIENT_ID=your_jamendo_id
    ALLOWED_ORIGINS=http://localhost:5173
-   JWT_SECRET=your_secret_key
    ```
 3. **Install dependencies**:
    ```bash
@@ -51,15 +49,25 @@ A high-performance music streaming API built with Go, Gin, and GORM. This backen
 
 ## 🌐 API Endpoints
 
-- `POST /v1/auth/register` - User registration
-- `POST /v1/auth/login` - User login
+### Auth
+- `POST /v1/auth/register` - Register new account
+- `POST /v1/auth/login` - Login and get JWT
+- `GET /v1/me/profile` - Verify session and get user info (Protected)
+
+### Music
 - `GET /v1/music/search?q=...` - Search music
 - `GET /v1/music/feed` - Discovery feed
-- `GET /v1/music/recommendations` - Activity-based recommendations
-- `GET /v1/me/playlists` - Get user playlists
-- `POST /v1/me/playlists` - Create new playlist
-- `POST /v1/me/playlists/:id/tracks` - Add track to playlist
+- `GET /v1/music/recommendations` - Popular track recommendations
+- `GET /v1/music/most-played` - Global top tracks
+
+### User Library (Protected)
+- `GET /v1/me/playlists` - List user playlists
+- `POST /v1/me/playlists` - Create playlist
+- `POST /v1/me/playlists/:id/tracks` - Add track to playlist (uses Title)
+- `POST /v1/me/like` - Toggle like for a track
+- `GET /v1/me/liked` - List liked tracks
+- `POST /v1/me/recent` - Save play history
 
 ## 🚢 Deployment
 
-Recommended platforms: **Render**, **Railway**, or **Fly.io**. Ensure you set the `ALLOWED_ORIGINS` environment variable to your production frontend URL.
+Optimized for **Render**. Ensure you set the `ALLOWED_ORIGINS` to match your frontend domain to allow cross-origin requests.
