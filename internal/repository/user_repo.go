@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/sumbul/music-player-backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -9,6 +11,7 @@ type UserRepository interface {
 	Create(user *models.User) error
 	GetByEmail(email string) (*models.User, error)
 	GetByID(id string) (*models.User, error)
+	UpdateLastSeen(id string) error
 }
 
 type userRepo struct {
@@ -39,4 +42,7 @@ func (r *userRepo) GetByID(id string) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+func (r *userRepo) UpdateLastSeen(id string) error {
+	return r.db.Model(&models.User{}).Where("id = ?", id).Update("last_seen", time.Now()).Error
 }

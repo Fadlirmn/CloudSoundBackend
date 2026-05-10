@@ -9,6 +9,7 @@ type User struct {
 	Name         string    `json:"name"`
 	Email        string    `gorm:"uniqueIndex" json:"email"`
 	PasswordHash string    `json:"-"`
+	LastSeen     time.Time `json:"last_seen"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -40,12 +41,25 @@ type PlaylistTrack struct {
 }
 
 type RecentlyPlayed struct {
-	UserID          string    `gorm:"primaryKey"`
-	TrackExternalID string    `gorm:"primaryKey"`
+	UserID          string    `gorm:"primaryKey" json:"user_id"`
+	TrackExternalID string    `gorm:"primaryKey" json:"track_external_id"`
 	PlayedAt        time.Time `json:"played_at"`
+}
+
+type LikedTrack struct {
+	UserID          string    `gorm:"primaryKey" json:"user_id"`
+	TrackExternalID string    `gorm:"primaryKey" json:"track_external_id"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type APIUsage struct {
 	Datetime string `json:"datetime"`
 	Hits     int    `json:"hits"`
+}
+
+type SystemLog struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Event     string    `json:"event"`
+	Message   string    `json:"message"`
+	CreatedAt time.Time `json:"created_at"`
 }

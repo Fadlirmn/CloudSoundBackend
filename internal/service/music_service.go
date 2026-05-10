@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/sumbul/music-player-backend/internal/models"
+	"github.com/sumbul/music-player-backend/internal/repository"
 	"github.com/sumbul/music-player-backend/pkg/external_api"
 )
 
@@ -15,14 +16,19 @@ type MusicService interface {
 	GetHomeFeed() ([]models.Track, error)
 	GetRecommendations() ([]models.APIUsage, error)
 	GetMostPlayed() ([]models.Track, error)
+	SaveRecentlyPlayed(userID string, track *models.Track) error
+	ToggleLike(userID string, track *models.Track) (bool, error)
+	GetLikedTracks(userID string) ([]models.Track, error)
 }
 
 type musicService struct {
-	client *external_api.JamendoClient
+	client   *external_api.JamendoClient
+	repo     repository.MusicRepository
+	userRepo repository.UserRepository
 }
 
-func NewMusicService(client *external_api.JamendoClient) MusicService {
-	return &musicService{client}
+func NewMusicService(client *external_api.JamendoClient, repo repository.MusicRepository, userRepo repository.UserRepository) MusicService {
+	return &musicService{client, repo, userRepo}
 }
 
 func (s *musicService) Search(query string) ([]models.Track, error) {
@@ -127,4 +133,18 @@ func (s *musicService) mapJamendoToInternal(jamendoTracks []external_api.Jamendo
 		})
 	}
 	return tracks
+}
+
+func (s *musicService) SaveRecentlyPlayed(userID string, track *models.Track) error {
+	_ = s.userRepo.UpdateLastSeen(userID)
+	return s.repo.SaveRecentlyPlayed(userID, track)
+}
+
+func (s *musicService) ToggleLike(userID string, track *models.Track) (bool, error) {
+	_ = s.userRepo.UpdateLastSeen(userID)
+	return s.repo.ToggleLike(userID, track)
+}
+
+func (s *musicService) GetLikedTracks(userID string) ([]models.Track, error) {
+	return s.repo.GetLikedTracks(userID)
 }

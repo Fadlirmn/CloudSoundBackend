@@ -68,5 +68,8 @@ func (s *authService) Login(email, password string) (string, *models.User, error
 		return "", nil, err
 	}
 
+	// Update last seen
+	_ = s.repo.UpdateLastSeen(user.ID)
+
 	return token, user, nil
 }

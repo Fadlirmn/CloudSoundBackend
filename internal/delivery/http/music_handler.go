@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sumbul/music-player-backend/internal/models"
 	"github.com/sumbul/music-player-backend/internal/service"
 )
 
@@ -64,6 +65,66 @@ func (h *MusicHandler) GetRecommendations(c *gin.Context) {
 
 func (h *MusicHandler) GetMostPlayed(c *gin.Context) {
 	tracks, err := h.service.GetMostPlayed()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, tracks)
+}
+
+func (h *MusicHandler) SaveRecentlyPlayed(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var track models.Track
+	if err := c.ShouldBindJSON(&track); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.SaveRecentlyPlayed(userID, &track)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
+}
+
+func (h *MusicHandler) ToggleLike(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var track models.Track
+	if err := c.ShouldBindJSON(&track); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	isLiked, err := h.service.ToggleLike(userID, &track)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"is_liked": isLiked})
+}
+
+func (h *MusicHandler) GetLikedTracks(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	tracks, err := h.service.GetLikedTracks(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

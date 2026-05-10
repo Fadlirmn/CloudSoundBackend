@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -14,6 +15,7 @@ import (
 )
 
 func main() {
+	log.Println("Memulai aplikasi...")
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
@@ -28,14 +30,19 @@ func main() {
 	// Initialize Repositories
 	userRepo := repository.NewUserRepository(db)
 	playlistRepo := repository.NewPlaylistRepository(db)
+	musicRepo := repository.NewMusicRepository(db)
 
 	// Initialize External Clients
 	jamendoClient := external_api.NewJamendoClient(os.Getenv("JAMENDO_CLIENT_ID"))
 
 	// Initialize Services
 	authService := service.NewAuthService(userRepo)
-	musicService := service.NewMusicService(jamendoClient)
+	musicService := service.NewMusicService(jamendoClient, musicRepo, userRepo)
 	playlistService := service.NewPlaylistService(playlistRepo)
+	keepAliveService := service.NewKeepAliveService(db)
+
+	// Start Background Workers
+	keepAliveService.StartBackgroundWorker()
 
 	// Initialize Handlers
 	authHandler := http.NewAuthHandler(authService)
@@ -46,15 +53,25 @@ func main() {
 	r := gin.Default()
 
 	// CORS Middleware
-	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
-	if allowedOrigins == "" {
-		allowedOrigins = "http://localhost:5173"
+	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+	if len(allowedOrigins) == 0 || allowedOrigins[0] == "" {
+		allowedOrigins = []string{"http://localhost:5173"}
+	}
+
+	allowedMethods := strings.Split(os.Getenv("ALLOWED_METHODS"), ",")
+	if len(allowedMethods) == 0 || allowedMethods[0] == "" {
+		allowedMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	}
+
+	allowedHeaders := strings.Split(os.Getenv("ALLOWED_HEADERS"), ",")
+	if len(allowedHeaders) == 0 || allowedHeaders[0] == "" {
+		allowedHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	}
 	
 	r.Use(cors.New(cors.Options{
-		AllowedOrigins:   []string{allowedOrigins},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowedOrigins:   allowedOrigins,
+		AllowedMethods:   allowedMethods,
+		AllowedHeaders:   allowedHeaders,
 		ExposedHeaders:   []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
@@ -86,6 +103,11 @@ func main() {
 			meGroup.GET("/playlists", playlistHandler.GetMyPlaylists)
 			meGroup.POST("/playlists", playlistHandler.Create)
 			meGroup.POST("/playlists/:id/tracks", playlistHandler.AddTrack)
+			
+			// Music Activity
+			meGroup.POST("/recent", musicHandler.SaveRecentlyPlayed)
+			meGroup.POST("/like", musicHandler.ToggleLike)
+			meGroup.GET("/liked", musicHandler.GetLikedTracks)
 		}
 	}
 
