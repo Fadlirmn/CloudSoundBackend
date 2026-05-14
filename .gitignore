@@ -34,3 +34,6 @@ SystemPrd.md
 # Agent files
 .agents/
 skills-lock.json
+
+# Service Account
+service-account.json

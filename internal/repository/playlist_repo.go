@@ -1,70 +1,126 @@
 package repository
 
 import (
+	"context"
+
+	"cloud.google.com/go/firestore"
 	"github.com/sumbul/music-player-backend/internal/models"
-	"gorm.io/gorm"
+	"google.golang.org/api/iterator"
 )
 
 type PlaylistRepository interface {
 	Create(playlist *models.Playlist) error
 	GetByUserID(userID string) ([]models.Playlist, error)
-	GetByID(id uint) (*models.Playlist, error)
-	AddTrack(playlistID uint, track *models.Track) error
-	RemoveTrack(playlistID uint, trackTitle string) error
+	GetByID(id string) (*models.Playlist, error)
+	AddTrack(playlistID string, track *models.Track) error
+	RemoveTrack(playlistID string, trackTitle string) error
 }
 
 type playlistRepo struct {
-	db *gorm.DB
+	client *firestore.Client
 }
 
-func NewPlaylistRepository(db *gorm.DB) PlaylistRepository {
-	return &playlistRepo{db}
+func NewPlaylistRepository(client *firestore.Client) PlaylistRepository {
+	return &playlistRepo{client}
 }
 
 func (r *playlistRepo) Create(playlist *models.Playlist) error {
-	return r.db.Create(playlist).Error
-}
-
-func (r *playlistRepo) GetByUserID(userID string) ([]models.Playlist, error) {
-	var playlists []models.Playlist
-	err := r.db.Where("user_id = ?", userID).Find(&playlists).Error
-	return playlists, err
-}
-
-func (r *playlistRepo) GetByID(id uint) (*models.Playlist, error) {
-	var playlist models.Playlist
-	err := r.db.Preload("Tracks").First(&playlist, id).Error
-	if err != nil {
-		return nil, err
-	}
-	return &playlist, nil
-}
-
-func (r *playlistRepo) AddTrack(playlistID uint, track *models.Track) error {
-	// Ensure track exists in database (caching metadata by Title)
-	var existingTrack models.Track
-	err := r.db.Where("title = ?", track.Title).First(&existingTrack).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			if err := r.db.Create(track).Error; err != nil {
-				return err
-			}
-			existingTrack = *track
-		} else {
-			return err
-		}
-	}
-
-	// Manual association to ensure we use TrackTitle in the many-to-many link if needed,
-	// but GORM association handles it if the schema is correct.
-	return r.db.Model(&models.Playlist{ID: playlistID}).Association("Tracks").Append(&existingTrack)
-}
-
-func (r *playlistRepo) RemoveTrack(playlistID uint, trackTitle string) error {
-	var track models.Track
-	err := r.db.Where("title = ?", trackTitle).First(&track).Error
+	ctx := context.Background()
+	docRef, _, err := r.client.Collection("playlists").Add(ctx, playlist)
 	if err != nil {
 		return err
 	}
-	return r.db.Model(&models.Playlist{ID: playlistID}).Association("Tracks").Delete(&track)
+	playlist.ID = docRef.ID
+	// Update the ID in the document as well
+	_, err = docRef.Update(ctx, []firestore.Update{
+		{Path: "id", Value: docRef.ID},
+	})
+	return err
+}
+
+func (r *playlistRepo) GetByUserID(userID string) ([]models.Playlist, error) {
+	ctx := context.Background()
+	var playlists []models.Playlist
+	iter := r.client.Collection("playlists").Where("user_id", "==", userID).Documents(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var playlist models.Playlist
+		if err := doc.DataTo(&playlist); err != nil {
+			return nil, err
+		}
+		playlist.ID = doc.Ref.ID
+		playlists = append(playlists, playlist)
+	}
+	return playlists, nil
+}
+
+func (r *playlistRepo) GetByID(id string) (*models.Playlist, error) {
+	ctx := context.Background()
+	doc, err := r.client.Collection("playlists").Doc(id).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var playlist models.Playlist
+	if err := doc.DataTo(&playlist); err != nil {
+		return nil, err
+	}
+	playlist.ID = doc.Ref.ID
+	return &playlist, nil
+}
+
+func (r *playlistRepo) AddTrack(playlistID string, track *models.Track) error {
+	ctx := context.Background()
+	docRef := r.client.Collection("playlists").Doc(playlistID)
+	
+	// In Firestore, we can just append to the Tracks array
+	_, err := docRef.Update(ctx, []firestore.Update{
+		{
+			Path:  "tracks",
+			Value: firestore.ArrayUnion(track),
+		},
+	})
+	return err
+}
+
+func (r *playlistRepo) RemoveTrack(playlistID string, trackTitle string) error {
+	ctx := context.Background()
+	docRef := r.client.Collection("playlists").Doc(playlistID)
+	
+	// Removing from array in Firestore by value is tricky if we only have the title.
+	// We'll need to get the playlist, find the track, and then remove it.
+	doc, err := docRef.Get(ctx)
+	if err != nil {
+		return err
+	}
+	
+	var playlist models.Playlist
+	if err := doc.DataTo(&playlist); err != nil {
+		return err
+	}
+	
+	var trackToRemove *models.Track
+	for _, t := range playlist.Tracks {
+		if t.Title == trackTitle {
+			trackToRemove = &t
+			break
+		}
+	}
+	
+	if trackToRemove == nil {
+		return nil // Not found
+	}
+	
+	_, err = docRef.Update(ctx, []firestore.Update{
+		{
+			Path:  "tracks",
+			Value: firestore.ArrayRemove(trackToRemove),
+		},
+	})
+	return err
 }

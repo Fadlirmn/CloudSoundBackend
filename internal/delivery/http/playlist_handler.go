@@ -2,7 +2,6 @@ package http
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sumbul/music-player-backend/internal/models"
@@ -27,7 +26,7 @@ func (h *PlaylistHandler) Create(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
 	var req createPlaylistRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := h.ShouldBindJSON(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -54,20 +53,24 @@ func (h *PlaylistHandler) GetMyPlaylists(c *gin.Context) {
 }
 
 func (h *PlaylistHandler) AddTrack(c *gin.Context) {
-	idStr := c.Param("id")
-	id, _ := strconv.ParseUint(idStr, 10, 32)
+	id := c.Param("id")
 
 	var track models.Track
-	if err := c.ShouldBindJSON(&track); err != nil {
+	if err := h.ShouldBindJSON(c, &track); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := h.service.AddTrackToPlaylist(uint(id), track)
+	err := h.service.AddTrackToPlaylist(id, track)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Track added to playlist"})
+}
+
+// Helper method to bind JSON
+func (h *PlaylistHandler) ShouldBindJSON(c *gin.Context, obj interface{}) error {
+	return c.ShouldBindJSON(obj)
 }

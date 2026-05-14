@@ -21,16 +21,17 @@ func main() {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	// Initialize Database
-	db, err := repository.InitDB()
+	// Initialize Firebase Firestore
+	client, err := repository.InitDB()
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to Firebase: %v", err)
 	}
+	defer client.Close()
 
 	// Initialize Repositories
-	userRepo := repository.NewUserRepository(db)
-	playlistRepo := repository.NewPlaylistRepository(db)
-	musicRepo := repository.NewMusicRepository(db)
+	userRepo := repository.NewUserRepository(client)
+	playlistRepo := repository.NewPlaylistRepository(client)
+	musicRepo := repository.NewMusicRepository(client)
 
 	// Initialize External Clients
 	jamendoClient := external_api.NewJamendoClient(os.Getenv("JAMENDO_CLIENT_ID"))
@@ -39,7 +40,7 @@ func main() {
 	authService := service.NewAuthService(userRepo)
 	musicService := service.NewMusicService(jamendoClient, musicRepo, userRepo)
 	playlistService := service.NewPlaylistService(playlistRepo)
-	keepAliveService := service.NewKeepAliveService(db)
+	keepAliveService := service.NewKeepAliveService(client)
 
 	// Start Background Workers
 	keepAliveService.StartBackgroundWorker()
@@ -60,10 +61,10 @@ func main() {
 		allowedOrigins = strings.Split(envOrigins, ",")
 	}
 
-	// Selalu tambahkan localhost agar development di CachyOS tetap lancar
+	// Selalu tambahkan localhost agar development tetap lancar
 	allowedOrigins = append(allowedOrigins, "http://localhost:5173")
 
-	// Hapus spasi jika ada user yang input "url1, url2" (pakai spasi)
+	// Hapus spasi jika ada user yang input "url1, url2"
 	for i, v := range allowedOrigins {
 		allowedOrigins[i] = strings.TrimSpace(v)
 	}

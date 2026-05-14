@@ -8,9 +8,9 @@ import (
 type PlaylistService interface {
 	CreatePlaylist(userID string, title, description string, isPublic bool) (*models.Playlist, error)
 	GetUserPlaylists(userID string) ([]models.Playlist, error)
-	GetPlaylistByID(id uint) (*models.Playlist, error)
-	AddTrackToPlaylist(playlistID uint, track models.Track) error
-	RemoveTrackFromPlaylist(playlistID uint, trackTitle string) error
+	GetPlaylistByID(id string) (*models.Playlist, error)
+	AddTrackToPlaylist(playlistID string, track models.Track) error
+	RemoveTrackFromPlaylist(playlistID string, trackTitle string) error
 }
 
 type playlistService struct {
@@ -36,14 +36,14 @@ func (s *playlistService) GetUserPlaylists(userID string) ([]models.Playlist, er
 	return s.repo.GetByUserID(userID)
 }
 
-func (s *playlistService) GetPlaylistByID(id uint) (*models.Playlist, error) {
+func (s *playlistService) GetPlaylistByID(id string) (*models.Playlist, error) {
 	return s.repo.GetByID(id)
 }
 
-func (s *playlistService) AddTrackToPlaylist(playlistID uint, track models.Track) error {
+func (s *playlistService) AddTrackToPlaylist(playlistID string, track models.Track) error {
 	return s.repo.AddTrack(playlistID, &track)
 }
 
-func (s *playlistService) RemoveTrackFromPlaylist(playlistID uint, trackTitle string) error {
+func (s *playlistService) RemoveTrackFromPlaylist(playlistID string, trackTitle string) error {
 	return s.repo.RemoveTrack(playlistID, trackTitle)
 }
